@@ -8,7 +8,7 @@ import {
     X, Phone, Globe, Instagram, Copy, Check, MessageSquare, 
     Mic, Mail, AlertTriangle, Lightbulb, Factory, Target, 
     BarChart3, PlusCircle, CheckCircle, MapPin, Linkedin, 
-    Users, ExternalLink, Network, Search
+    Users, ExternalLink, Network, Search, RefreshCw
 } from 'lucide-react';
 
 interface LeadDetailsModalProps {
@@ -34,6 +34,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
   
   const fetchAnalysis = useCallback(async () => {
     setIsLoading(true);
+    setAnalysis(null); // Clear previous analysis to avoid stale data during retry
     try {
       const result = await generateLeadAnalysis(lead);
       setAnalysis(result);
@@ -113,7 +114,18 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
                     <Spinner />
                 </div>
             ) : !analysis ? (
-                <div className="text-center py-10 text-red-500">Falha ao carregar análise. Tente novamente.</div>
+                <div className="h-full flex flex-col items-center justify-center min-h-[300px] gap-4">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-full">
+                        <AlertTriangle size={32} className="text-red-500 dark:text-red-400"/>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Falha ao carregar análise. Tente novamente.</p>
+                    <button 
+                        onClick={fetchAnalysis}
+                        className="px-6 py-2 bg-[#FF6828] hover:bg-[#E65014] text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2"
+                    >
+                        <RefreshCw size={18}/> Tentar Novamente
+                    </button>
+                </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     

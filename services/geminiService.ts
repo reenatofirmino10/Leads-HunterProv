@@ -250,10 +250,10 @@ export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAna
         `;
 
         /**
-         * Using gemini-3-pro-preview for complex engineering and reasoning tasks.
+         * Using gemini-3-flash-preview for high performance and stability in structured JSON tasks.
          */
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
