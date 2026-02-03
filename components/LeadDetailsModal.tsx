@@ -8,7 +8,8 @@ import {
     X, Phone, Globe, Instagram, Copy, Check, MessageSquare, 
     Mic, Mail, AlertTriangle, Lightbulb, Factory, Target, 
     BarChart3, PlusCircle, CheckCircle, MapPin, Linkedin, 
-    Users, ExternalLink, Network, Search, RefreshCw
+    Users, ExternalLink, Network, Search, RefreshCw, ShieldCheck, Zap,
+    Map
 } from 'lucide-react';
 
 interface LeadDetailsModalProps {
@@ -34,7 +35,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
   
   const fetchAnalysis = useCallback(async () => {
     setIsLoading(true);
-    setAnalysis(null); // Clear previous analysis to avoid stale data during retry
+    setAnalysis(null);
     try {
       const result = await generateLeadAnalysis(lead);
       setAnalysis(result);
@@ -61,244 +62,245 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
     setTimeout(() => setCopiedSection(null), 2000);
   };
 
-  const renderSocialIcon = (url: string | null, icon: React.ReactNode) => {
-      if (!url) return null;
-      return (
-        <a href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" 
-           className="text-gray-400 hover:text-[#FF6828] transition-colors bg-gray-100 dark:bg-gray-800 p-2 rounded-full">
-            {icon}
-        </a>
-      );
-  };
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lead.nome} ${lead.cidade} ${lead.estado}`)}`;
 
   return (
-    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden transition-colors duration-300" onClick={(e) => e.stopPropagation()}>
+    // FIX: Layout adjust to respect System Header (top-[80px]) and z-index below header (z-40)
+    <div className="fixed inset-x-0 bottom-0 top-[80px] bg-gray-900/60 backdrop-blur-sm flex items-start justify-center z-40 p-4 lg:p-6" onClick={onClose}>
+      <div 
+        className="bg-[#F9FAFB] dark:bg-gray-950 w-full max-w-[1400px] h-full rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 dark:border-gray-800 ring-1 ring-black/5" 
+        onClick={(e) => e.stopPropagation()}
+      >
         
-        {/* COMPACT HEADER */}
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-            <div className="flex items-start gap-4">
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl">
-                    <Factory className="text-[#FF6828] h-8 w-8" />
-                </div>
+        {/* ==================================================================================
+            LEFT COLUMN: MAIN CONTENT (Scrollable)
+           ================================================================================== */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-gray-950">
+            
+            {/* HEADER */}
+            <header className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-start shrink-0 bg-white dark:bg-gray-950 sticky top-0 z-20">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{lead.nome}</h2>
-                    <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center"><Target size={14} className="mr-1"/> {lead.segmento}</span>
-                        <span className="w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                        <span className="flex items-center"><MapPin size={14} className="mr-1"/> {lead.cidade}, {lead.estado}</span>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">
+                            <Factory className="text-[#FF6828] h-5 w-5" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{lead.nome}</h2>
+                        {lead.site && (
+                            <a href={lead.site.startsWith('http') ? lead.site : `https://${lead.site}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#FF6828] transition-colors">
+                                <Globe size={16} />
+                            </a>
+                        )}
+                        {lead.instagram && (
+                             <a href={lead.instagram.startsWith('http') ? lead.instagram : `https://${lead.instagram}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#FF6828] transition-colors">
+                                <Instagram size={16} />
+                            </a>
+                        )}
+                    </div>
+
+                    {/* CONTEXTUAL INTRODUCTION */}
+                    {analysis?.short_context && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3 leading-relaxed max-w-2xl font-medium animate-in fade-in duration-500">
+                            {analysis.short_context}
+                        </p>
+                    )}
+
+                    <div className="flex items-center gap-4 text-sm text-gray-500 font-medium">
+                        <span className="flex items-center gap-1.5"><Target size={14} className="text-[#FF6828]"/> {lead.segmento}</span>
+                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                        
+                        {/* INTERACTIVE LOCATION POPOVER */}
+                        <div className="relative group">
+                            <span className="flex items-center gap-1.5 cursor-help hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+                                <MapPin size={14} className="text-gray-400"/> 
+                                <span className="border-b border-dashed border-gray-300 dark:border-gray-600 pb-0.5">{lead.cidade}, {lead.estado}</span>
+                            </span>
+                            
+                            {/* POPOVER CONTENT */}
+                            <div className="absolute top-full left-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform translate-y-2 group-hover:translate-y-0">
+                                <div className="absolute -top-1.5 left-6 w-3 h-3 bg-white dark:bg-gray-800 border-t border-l border-gray-100 dark:border-gray-700 transform rotate-45"></div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Localização Aproximada</p>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3 leading-snug">
+                                    {lead.cidade}, {lead.estado}
+                                </p>
+                                <a 
+                                    href={googleMapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors group/link"
+                                >
+                                    <Map size={14} className="text-blue-500 group-hover/link:text-blue-600"/> 
+                                    Abrir no Google Maps
+                                </a>
+                            </div>
+                        </div>
+
                         {lead.telefone && (
                             <>
-                            <span className="w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                            <span className="flex items-center font-medium text-gray-700 dark:text-gray-300"><Phone size={14} className="mr-1"/> {lead.telefone}</span>
+                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                <span className="flex items-center gap-1.5"><Phone size={14} className="text-gray-400"/> {lead.telefone}</span>
                             </>
                         )}
                     </div>
                 </div>
-            </div>
-
-            <div className="flex items-center gap-3 self-end md:self-auto">
-                {renderSocialIcon(lead.site, <Globe size={18}/>)}
-                {renderSocialIcon(lead.instagram, <Instagram size={18}/>)}
-                {analysis?.connections?.linkedin_company_url && renderSocialIcon(analysis.connections.linkedin_company_url, <Linkedin size={18}/>)}
-                <button onClick={onClose} className="ml-4 p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all">
-                    <X size={24} />
+                <button onClick={onClose} className="p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full transition-all">
+                    <X size={20} />
                 </button>
-            </div>
-        </div>
-        
-        {/* SCROLLABLE CONTENT */}
-        <div className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-gray-950/50 p-6 md:p-8">
-            {isLoading ? (
-                <div className="h-full flex items-center justify-center min-h-[400px]">
-                    <Spinner />
-                </div>
-            ) : !analysis ? (
-                <div className="h-full flex flex-col items-center justify-center min-h-[300px] gap-4">
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-full">
-                        <AlertTriangle size={32} className="text-red-500 dark:text-red-400"/>
+            </header>
+
+            {/* CONTENT BODY */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+                {isLoading ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-4">
+                        <Spinner />
+                        <p className="text-gray-400 font-medium animate-pulse">Consultando inteligência comercial...</p>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">Falha ao carregar análise. Tente novamente.</p>
-                    <button 
-                        onClick={fetchAnalysis}
-                        className="px-6 py-2 bg-[#FF6828] hover:bg-[#E65014] text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2"
-                    >
-                        <RefreshCw size={18}/> Tentar Novamente
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    {/* LEFT COLUMN - TECHNICAL & STRATEGIC (70%) */}
-                    <div className="lg:col-span-2 space-y-8">
-                        
-                        {/* 3. SCRIPTS DE ABORDAGEM (TABS) */}
-                        <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                            <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide">
-                                {[
-                                    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-                                    { id: 'phone', label: 'Ligação (Pitch)', icon: Mic },
-                                    { id: 'email', label: 'E-mail', icon: Mail },
-                                    { id: 'objections', label: 'Objeções', icon: AlertTriangle },
-                                    { id: 'connections', label: '🔗 Conexões Comerciais', icon: Network },
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id as any)}
-                                        className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all whitespace-nowrap
-                                            ${activeTab === tab.id 
-                                                ? 'bg-white dark:bg-gray-900 text-[#FF6828] border-b-2 border-[#FF6828]' 
-                                                : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-transparent'
-                                            }`}
-                                    >
-                                        <tab.icon size={16} />
-                                        {tab.label}
-                                    </button>
-                                ))}
+                ) : !analysis ? (
+                     <div className="h-full flex flex-col items-center justify-center gap-4">
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-full">
+                            <AlertTriangle size={32} className="text-red-500"/>
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-300 font-medium">Análise indisponível no momento.</p>
+                        <button onClick={fetchAnalysis} className="px-6 py-2 bg-[#FF6828] text-white font-bold rounded-lg hover:bg-[#E65014] transition-all flex items-center gap-2">
+                            <RefreshCw size={18}/> Tentar Novamente
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* 1. PAINEL DE AÇÃO COMERCIAL (SCRIPTS) */}
+                        <section className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                    <MessageSquare size={18} className="text-[#FF6828]"/>
+                                    Painel de Ação Comercial
+                                </h3>
+                                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full border border-green-100 dark:border-green-800">
+                                    <ShieldCheck size={12} />
+                                    <span className="text-[10px] font-bold uppercase tracking-wide">Inteligência Validada</span>
+                                </div>
                             </div>
 
-                            <div className="p-6 min-h-[300px]">
-                                {activeTab === 'connections' ? (
-                                    <div className="space-y-6">
-                                        {/* CARD 1 — PERFIL INSTITUCIONAL */}
-                                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between gap-4 group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                                    <Linkedin size={24} className="text-blue-600 dark:text-blue-400" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-800 dark:text-gray-200">Perfil Institucional</h4>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">Acesse a página institucional da empresa no LinkedIn.</p>
-                                                </div>
-                                            </div>
-                                            <a 
-                                                href={analysis.connections.linkedin_company_url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="px-5 py-2.5 bg-[#FF6828] hover:bg-[#E65014] text-white text-sm font-bold rounded-lg transition-all flex items-center gap-2 shadow-md hover:shadow-orange-500/20"
-                                            >
-                                                Abrir LinkedIn da Empresa
-                                                <ExternalLink size={14} />
-                                            </a>
-                                        </div>
-
-                                        {/* CARD 2 — DECISORES POTENCIAIS */}
-                                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <Users size={20} className="text-[#FF6828]" />
-                                                <h4 className="font-bold text-gray-800 dark:text-gray-200">Possíveis Decisores</h4>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {analysis.connections.potential_decisors.map((decisor, i) => (
-                                                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 font-bold text-xs uppercase">
-                                                                {decisor.name.substring(0, 1)}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{decisor.name}</p>
-                                                                <p className="text-[11px] text-gray-500 dark:text-gray-400">{decisor.role}</p>
-                                                            </div>
-                                                        </div>
-                                                        <a 
-                                                            href={decisor.linkedin_url} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                                            title="Abrir Perfil no LinkedIn"
-                                                        >
-                                                            <ExternalLink size={18} />
-                                                        </a>
-                                                    </div>
-                                                ))}
-                                                <button className="w-full mt-2 py-2 text-xs font-bold text-[#FF6828] hover:text-[#E65014] transition-colors flex items-center justify-center gap-2 border border-dashed border-orange-200 dark:border-orange-900/30 rounded-lg bg-orange-50/30 dark:bg-transparent">
-                                                    <Search size={14} />
-                                                    Buscar mais contatos
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* CARD 3 — MAPA DE INFLUÊNCIA */}
-                                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <Target size={20} className="text-[#FF6828]" />
-                                                <h4 className="font-bold text-gray-800 dark:text-gray-200">Sugestão de Abordagem</h4>
-                                            </div>
-                                            <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 relative group">
-                                                <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">
-                                                    {analysis.connections.influence_map}
-                                                </p>
-                                                <button 
-                                                    onClick={() => copyToClipboard(analysis.connections.influence_map, 'influence')}
-                                                    className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-gray-400 hover:text-[#FF6828] transition-all shadow-sm opacity-0 group-hover:opacity-100"
-                                                    title="Copiar abordagem sugerida"
-                                                >
-                                                    {copiedSection === 'influence' ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : activeTab === 'objections' ? (
-                                    <div className="space-y-4">
-                                        {analysis.scripts.objections_handling.map((obj, i) => (
-                                            <div key={i} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                                                <p className="font-bold text-gray-800 dark:text-gray-200 text-sm mb-2 text-red-500 dark:text-red-400">"{obj.objection}"</p>
-                                                <p className="text-gray-600 dark:text-gray-300 text-sm pl-3 border-l-2 border-green-500">{obj.response}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="relative group">
-                                        <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap font-mono leading-relaxed">
-                                            {activeTab === 'whatsapp' && analysis.scripts.whatsapp}
-                                            {activeTab === 'phone' && analysis.scripts.phone_pitch}
-                                            {activeTab === 'email' && analysis.scripts.email_template}
-                                        </div>
-                                        <button 
-                                            onClick={() => copyToClipboard(
-                                                activeTab === 'whatsapp' ? analysis.scripts.whatsapp : 
-                                                activeTab === 'phone' ? analysis.scripts.phone_pitch : 
-                                                analysis.scripts.email_template, 
-                                                activeTab
-                                            )}
-                                            className="absolute top-4 right-4 bg-white dark:bg-gray-700 p-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:text-[#FF6828] dark:hover:text-[#FF6828] transition-all opacity-0 group-hover:opacity-100"
-                                            title="Copiar Script"
+                            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                                {/* TABS AS PILLS */}
+                                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex gap-2 overflow-x-auto">
+                                    {[
+                                        { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+                                        { id: 'phone', label: 'Cold Call', icon: Phone },
+                                        { id: 'email', label: 'Cold Mail', icon: Mail },
+                                        { id: 'objections', label: 'Objeções', icon: ShieldCheck },
+                                        { id: 'connections', label: 'Decisores', icon: Users },
+                                    ].map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id as any)}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap
+                                                ${activeTab === tab.id 
+                                                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md' 
+                                                    : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                }`}
                                         >
-                                            {copiedSection === activeTab ? <Check size={16} className="text-green-500"/> : <Copy size={16}/>}
+                                            <tab.icon size={14} />
+                                            {tab.label}
                                         </button>
-                                    </div>
-                                )}
+                                    ))}
+                                </div>
+
+                                {/* TAB CONTENT */}
+                                <div className="p-6 min-h-[220px] bg-white dark:bg-gray-900">
+                                    {activeTab === 'connections' ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="col-span-1 md:col-span-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-lg text-blue-600 dark:text-blue-400"><Linkedin size={20}/></div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">Página Institucional</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">Mapeamento corporativo</p>
+                                                    </div>
+                                                </div>
+                                                <a href={analysis.connections.linkedin_company_url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                                    Acessar <ExternalLink size={12}/>
+                                                </a>
+                                            </div>
+                                            {analysis.connections.potential_decisors.map((d, i) => (
+                                                <div key={i} className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-orange-200 dark:hover:border-gray-700 transition-all bg-gray-50 dark:bg-gray-800/50">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">{d.name.charAt(0)}</div>
+                                                        <a href={d.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#FF6828]"><Search size={16}/></a>
+                                                    </div>
+                                                    <p className="font-bold text-sm text-gray-900 dark:text-white">{d.name}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{d.role}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : activeTab === 'objections' ? (
+                                        <div className="space-y-3">
+                                            {analysis.scripts.objections_handling.map((obj, i) => (
+                                                <div key={i} className="flex gap-4">
+                                                    <div className="mt-1 shrink-0"><AlertTriangle size={16} className="text-orange-500"/></div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">"{obj.objection}"</p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{obj.response}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="relative group">
+                                            <div className="text-base text-gray-700 dark:text-gray-300 font-sans leading-relaxed whitespace-pre-wrap">
+                                                {activeTab === 'whatsapp' && analysis.scripts.whatsapp}
+                                                {activeTab === 'phone' && analysis.scripts.phone_pitch}
+                                                {activeTab === 'email' && analysis.scripts.email_template}
+                                            </div>
+                                            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => copyToClipboard(
+                                                        activeTab === 'whatsapp' ? analysis.scripts.whatsapp : 
+                                                        activeTab === 'phone' ? analysis.scripts.phone_pitch : 
+                                                        analysis.scripts.email_template, 
+                                                        activeTab
+                                                    )}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg shadow-lg hover:bg-black transition-colors"
+                                                >
+                                                    {copiedSection === activeTab ? <Check size={14} className="text-green-400"/> : <Copy size={14}/>}
+                                                    {copiedSection === activeTab ? 'Copiado' : 'Copiar Texto'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </section>
 
-                        {/* 1. DIAGNÓSTICO TÉCNICO */}
-                        <section className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 mb-4">
-                                <Factory size={20} className="text-[#FF6828]"/>
-                                Diagnóstico Técnico
+                        {/* 2. ANÁLISE TÉCNICA (GRID) */}
+                        <section className="space-y-4">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                <Zap size={18} className="text-[#FF6828]"/>
+                                Análise Técnica do Prospect
                             </h3>
-                            
-                            <div className="grid md:grid-cols-2 gap-6">
+                            <div className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                                 <div>
-                                    <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Materiais Prováveis</h4>
-                                    <div className="flex flex-wrap gap-2">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Target size={14}/> Materiais Recomendados
+                                    </h4>
+                                    <ul className="space-y-3">
                                         {analysis.technical.probable_materials.map((mat, i) => (
-                                            <span key={i} className="px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 text-sm font-medium rounded-lg border border-orange-100 dark:border-orange-800">
+                                            <li key={i} className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 font-medium">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#FF6828]"></div>
                                                 {mat}
-                                            </span>
+                                            </li>
                                         ))}
+                                    </ul>
+                                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                        <span className="font-bold text-gray-700 dark:text-gray-300">Evidência de uso:</span> {analysis.technical.usage_evidence}
                                     </div>
-                                    <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                        <span className="font-semibold text-gray-700 dark:text-gray-200">Evidência: </span> 
-                                        {analysis.technical.usage_evidence}
-                                    </p>
                                 </div>
-                                <div>
-                                    <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Riscos Mapeados</h4>
-                                    <ul className="space-y-2">
+                                <div className="border-l border-gray-100 dark:border-gray-800 md:pl-6">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <AlertTriangle size={14}/> Pontos de Atenção
+                                    </h4>
+                                    <ul className="space-y-3">
                                         {analysis.technical.potential_risks.map((risk, i) => (
-                                            <li key={i} className="flex items-start text-sm text-gray-600 dark:text-gray-300">
-                                                <AlertTriangle size={14} className="text-amber-500 mr-2 mt-0.5 shrink-0"/>
+                                            <li key={i} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                                <X size={14} className="mt-0.5 text-red-400 shrink-0"/>
                                                 {risk}
                                             </li>
                                         ))}
@@ -307,88 +309,105 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
                             </div>
                         </section>
 
-                        {/* 2. OPORTUNIDADE COMERCIAL */}
-                        <section className="bg-gradient-to-r from-[#FF6828] to-[#E65014] hover:to-[#BF3D0B] p-6 rounded-2xl shadow-md text-white">
-                            <h3 className="text-lg font-bold flex items-center gap-2 mb-3">
-                                <Lightbulb size={20} className="text-yellow-200"/>
-                                Oportunidade Comercial
-                            </h3>
-                            <p className="text-orange-50 text-lg leading-relaxed font-medium mb-6">
-                                "{analysis.commercial.opportunity_summary}"
-                            </p>
-                            <div className="grid sm:grid-cols-3 gap-4">
-                                {analysis.commercial.key_benefits.map((benefit, i) => (
-                                    <div key={i} className="bg-white/10 backdrop-blur-md p-3 rounded-lg border border-white/20">
-                                        <div className="flex items-center gap-2 text-sm font-semibold mb-1">
-                                            <CheckCircle size={14} className="text-green-300"/> Benefício {i+1}
-                                        </div>
-                                        <p className="text-xs text-orange-100 leading-snug">{benefit}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-
-                    </div>
-
-                    {/* RIGHT COLUMN - METRICS (30%) */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 sticky top-6">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2">
-                                <BarChart3 size={20} className="text-[#FF6828]"/>
-                                Potencial do Lead
-                            </h3>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold mb-1">Volume Estimado</p>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`h-3 w-3 rounded-full ${lead.volume_estimado === 'Alto' ? 'bg-green-500' : lead.volume_estimado === 'Médio' ? 'bg-yellow-500' : 'bg-gray-400'}`}></div>
-                                        <span className="text-lg font-bold text-gray-800 dark:text-gray-200">{lead.volume_estimado}</span>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold mb-1">Frequência de Compra</p>
-                                    <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{lead.frequencia_compra}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold mb-1">Substrato Principal</p>
-                                    <span className="inline-block bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 px-3 py-1 rounded-md text-sm font-medium mt-1">
-                                        {lead.substrato_recomendado}
-                                    </span>
-                                </div>
-
-                                <hr className="border-gray-100 dark:border-gray-800"/>
-
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold mb-2">Produtos Sugeridos</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                        {lead.produtos_que_usa}
+                        {/* 3. OPORTUNIDADE COMERCIAL (DARK CARD) */}
+                        <section className="bg-[#1F2937] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6828] blur-[80px] opacity-20 pointer-events-none"></div>
+                            
+                            <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold flex items-center gap-2 mb-3 text-white">
+                                        <Lightbulb size={18} className="text-[#FF6828]"/>
+                                        Oportunidade Comercial
+                                    </h3>
+                                    <p className="text-gray-300 text-lg font-medium leading-relaxed mb-4">
+                                        "{analysis.commercial.opportunity_summary}"
                                     </p>
                                 </div>
+                                <div className="flex-1 w-full space-y-3">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Principais Benefícios</p>
+                                    {analysis.commercial.key_benefits.map((benefit, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                                            <CheckCircle size={16} className="text-green-400 shrink-0"/>
+                                            <span className="text-sm text-gray-200">{benefit}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
+                        </section>
+                    </>
+                )}
+            </div>
+        </div>
 
-                            <button
-                                onClick={handleAddLead}
-                                disabled={isAdded}
-                                className={`w-full mt-8 flex items-center justify-center py-4 px-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1
-                                    ${isAdded 
-                                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-none cursor-default hover:transform-none' 
-                                        : 'bg-[#FF6828] text-white hover:bg-[#E65014]'
-                                    }`}
-                            >
-                                {isAdded ? (
-                                    <><CheckCircle size={20} className="mr-2"/> Lead Salvo</>
-                                ) : (
-                                    <><PlusCircle size={20} className="mr-2"/> Adicionar ao Funil</>
-                                )}
-                            </button>
-                        </div>
+        {/* ==================================================================================
+            RIGHT COLUMN: EXECUTIVE SUMMARY (Fixed width on desktop)
+           ================================================================================== */}
+        <div className="w-full md:w-[360px] bg-[#111827] text-white flex flex-col shrink-0 overflow-y-auto border-t md:border-t-0 md:border-l border-gray-800">
+            <div className="p-8 space-y-8 flex-1 flex flex-col">
+                
+                <div className="space-y-2">
+                    <h3 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        <BarChart3 size={20} className="text-[#FF6828]"/> 
+                        Perfil de Demanda
+                    </h3>
+                    <p className="text-xs text-gray-500 font-medium">Resumo executivo do potencial</p>
+                </div>
+
+                {/* VOLUME & FREQUENCY GRID */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-[#1F2937] p-4 rounded-2xl border border-gray-800 text-center">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Volume</p>
+                        <p className="text-lg font-bold text-white">{lead.volume_estimado}</p>
+                        <div className={`h-1 w-8 mx-auto mt-2 rounded-full ${lead.volume_estimado === 'Alto' ? 'bg-green-500' : lead.volume_estimado === 'Médio' ? 'bg-yellow-500' : 'bg-gray-600'}`}></div>
+                    </div>
+                    <div className="bg-[#1F2937] p-4 rounded-2xl border border-gray-800 text-center">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Frequência</p>
+                        <p className="text-lg font-bold text-white">{lead.frequencia_compra}</p>
+                        <div className="h-1 w-8 mx-auto mt-2 rounded-full bg-blue-500"></div>
                     </div>
                 </div>
-            )}
+
+                {/* SUBSTRATE HIGHLIGHT */}
+                <div className="bg-[#FF6828] p-6 rounded-2xl shadow-lg shadow-orange-900/20 text-center space-y-2 transform hover:scale-[1.02] transition-transform duration-300">
+                    <p className="text-[10px] text-orange-100 uppercase font-black tracking-widest">Substrato Base</p>
+                    <p className="text-xl font-black text-white leading-tight break-words">
+                        {lead.substrato_recomendado}
+                    </p>
+                </div>
+
+                {/* PRODUCT LIST */}
+                <div className="space-y-3">
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Aplicação Provável</p>
+                    <div className="p-4 bg-[#1F2937] rounded-2xl border border-gray-800">
+                        <p className="text-sm text-gray-300 leading-relaxed">
+                            {lead.produtos_que_usa}
+                        </p>
+                    </div>
+                </div>
+
+                {/* DISCREET LOGISTICS BLOCK */}
+                <div className="mt-auto pt-6 border-t border-gray-800">
+                     <div className="flex justify-between items-end">
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Logística</p>
+                            <p className="text-sm font-bold text-gray-300 flex items-center gap-1">
+                                {lead.cidade} <span className="text-gray-600">·</span> {lead.estado}
+                            </p>
+                        </div>
+                        <a 
+                            href={googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[#FF6828] hover:text-white transition-colors flex items-center gap-1 font-bold group"
+                        >
+                            <MapPin size={12} className="group-hover:scale-110 transition-transform"/> Mapa
+                        </a>
+                     </div>
+                </div>
+
+            </div>
         </div>
+
       </div>
     </div>
   );

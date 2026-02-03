@@ -11,7 +11,7 @@ const MainLayout: React.FC = () => {
   return (
     <AppProvider>
       <div className="min-h-screen bg-[#F3F4F6] dark:bg-gray-950 text-[#111827] dark:text-gray-100 flex flex-col transition-colors duration-300">
-        <header className="bg-white dark:bg-gray-900 shadow-sm p-4 relative flex justify-between items-center border-b border-[#E5E7EB] dark:border-gray-800 sticky top-0 z-30 transition-colors duration-300">
+        <header className="bg-white dark:bg-gray-900 shadow-sm p-4 relative flex justify-between items-center border-b border-[#E5E7EB] dark:border-gray-800 sticky top-0 z-50 transition-colors duration-300">
           
           <div className="flex items-center space-x-8">
             <h1 className="text-2xl font-bold text-[#111827] dark:text-white tracking-wider flex items-center">

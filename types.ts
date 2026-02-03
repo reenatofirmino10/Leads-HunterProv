@@ -136,6 +136,7 @@ export interface AdditionalDataSuggestions {
 }
 
 export interface LeadAnalysis {
+  short_context: string;
   technical: {
     probable_materials: string[];
     usage_evidence: string;

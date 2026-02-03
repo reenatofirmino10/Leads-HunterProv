@@ -165,6 +165,7 @@ export const generateScripts = async (lead: PotentialLead): Promise<Scripts> => 
 const leadAnalysisSchema = {
     type: Type.OBJECT,
     properties: {
+        short_context: { type: Type.STRING, description: "Introdução contextual curta (2-3 linhas) sobre o perfil operacional da empresa. Foco em o que ela faz e seu posicionamento de mercado. Tom objetivo e consultivo. NÃO inclua histórico, missão ou valores." },
         technical: {
             type: Type.OBJECT,
             properties: {
@@ -223,7 +224,7 @@ const leadAnalysisSchema = {
             required: ["linkedin_company_url", "potential_decisors", "influence_map"]
         }
     },
-    required: ["technical", "commercial", "scripts", "connections"]
+    required: ["short_context", "technical", "commercial", "scripts", "connections"]
 };
 
 export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAnalysis> => {
@@ -241,10 +242,11 @@ export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAna
             Seu objetivo é munir o vendedor com inteligência técnica e comercial para fechar a conta.
             
             **Requisitos da Análise:**
-            1. **Diagnóstico Técnico:** Identifique os materiais exatos (especificações de papel/filme e adesivo) que este segmento OBRIGATORIAMENTE usa.
-            2. **Oportunidade Comercial:** Qual a "dor" deste segmento? Por que eles trocariam de fornecedor?
-            3. **Scripts de Alta Conversão:** Crie abordagens focadas em gatilhos mentais.
-            4. **Conexões Comerciais:** Identifique 3 perfis de cargos decisores típicos para este segmento (ex: Gerente de Compras, Engenheiro de Embalagens, Diretor de Produção). Gere URLs de busca profunda no LinkedIn que facilitem ao usuário encontrar essas pessoas reais. Forneça também a URL provável da empresa no LinkedIn.
+            1. **Contexto Operacional:** Gere um parágrafo curto (2-3 linhas) descrevendo o que a empresa faz e seu contexto operacional. Seja direto e profissional (sem "somos uma empresa", use "Empresa especializada em...").
+            2. **Diagnóstico Técnico:** Identifique os materiais exatos (especificações de papel/filme e adesivo) que este segmento OBRIGATORIAMENTE usa.
+            3. **Oportunidade Comercial:** Qual a "dor" deste segmento? Por que eles trocariam de fornecedor?
+            4. **Scripts de Alta Conversão:** Crie abordagens focadas em gatilhos mentais.
+            5. **Conexões Comerciais:** Identifique 3 perfis de cargos decisores típicos para este segmento (ex: Gerente de Compras, Engenheiro de Embalagens, Diretor de Produção). Gere URLs de busca profunda no LinkedIn que facilitem ao usuário encontrar essas pessoas reais. Forneça também a URL provável da empresa no LinkedIn.
 
             Use linguagem técnica correta (ex: "BOPP", "Hotmelt", "Acrílico", "Frontal", "Liner").
         `;
