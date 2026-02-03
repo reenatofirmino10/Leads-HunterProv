@@ -1,7 +1,5 @@
 {
   "name": " LeadsHunter PRO",
   "description": "Micro SaaS de prospecção B2B focado no setor gráfico com gestão administrativa robusta, ciclos de 30 dias e controle de faturamento antifraude.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }

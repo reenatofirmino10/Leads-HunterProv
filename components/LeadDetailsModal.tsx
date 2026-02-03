@@ -6,7 +6,7 @@ import Spinner from './Spinner';
 import { useAppContext } from '../contexts/AppContext';
 import { 
     X, Phone, Globe, Instagram, Copy, Check, MessageSquare, 
-    Mic, Mail, AlertTriangle, Lightbulb, Factory, Target, 
+    Mail, AlertTriangle, Lightbulb, Factory, Target, 
     BarChart3, PlusCircle, CheckCircle, MapPin, Linkedin, 
     Users, ExternalLink, Network, Search, RefreshCw, ShieldCheck, Zap,
     Map
