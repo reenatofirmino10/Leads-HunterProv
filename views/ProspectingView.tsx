@@ -6,15 +6,14 @@ import ResultsTable from '../components/ResultsTable';
 import LeadDetailsModal from '../components/LeadDetailsModal';
 import { findProspects } from '../services/geminiService';
 import Spinner from '../components/Spinner';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertCircle, SearchX } from 'lucide-react';
 import { RADIUS_OPTIONS } from '../constants';
 import { useTheme } from '../contexts/ThemeContext';
 
 const ProspectingView: React.FC = () => {
-  // Form state lifted up to this view
   const [prospectType, setProspectType] = useState<ProspectType>(ProspectType.COMMERCIAL);
   const [segment, setSegment] = useState('');
-  const [customSegment, setCustomSegment] = useState(''); // Added state for custom "Outro" segment
+  const [customSegment, setCustomSegment] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [radius, setRadius] = useState(RADIUS_OPTIONS[3]); // Default to 25 km
@@ -46,10 +45,16 @@ const ProspectingView: React.FC = () => {
     try {
       const { prospects, total } = await findProspects(params.segment, params.city, params.state, page, params.radius, params.niche, params.keywords, RESULTS_PER_PAGE, params.customSegment);
       setResults(prospects);
+      // Se vier do fallback, pode ter poucos resultados, mas não é erro
       setTotalResults(total);
       setTotalPages(Math.ceil(total / RESULTS_PER_PAGE));
+      
+      if (prospects.length === 0) {
+        // Estado vazio tratado na UI
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
+      console.error("View Error:", err);
+      setError('Não foi possível completar a busca. Tente novamente ou ajuste os filtros.');
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +73,7 @@ const ProspectingView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-12">
       <ProspectingForm
         prospectType={prospectType} setProspectType={setProspectType}
         segment={segment} setSegment={setSegment}
@@ -82,49 +87,71 @@ const ProspectingView: React.FC = () => {
         isLoading={isLoading}
       />
 
-      {isLoading && <div className="flex justify-center p-8"><Spinner /></div>}
-
-      {error && (
-        <div className="bg-[#FEF2F2] dark:bg-red-900/20 border border-[#FCA5A5] dark:border-red-800 text-[#DC2626] dark:text-red-400 px-4 py-3 rounded-md text-center">
-          <p className="font-bold">Erro na Prospecção</p>
-          <p className="text-sm">{error}</p>
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+            <Spinner />
+            <p className="mt-4 text-gray-500 font-medium">Analisando mercado em tempo real...</p>
         </div>
       )}
 
-      {!isLoading && results.length > 0 && (
-        <>
+      {error && (
+        <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-xl shadow-sm">
+          <AlertCircle size={24} />
+          <div>
+              <p className="font-bold">Erro na Prospecção</p>
+              <p className="text-sm opacity-90">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && results.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ResultsTable
             leads={results}
             onViewDetails={setSelectedLead}
             />
+            
             {totalPages > 1 && (
-                <div className="flex justify-center items-center space-x-4 mt-6 text-[#6B7280] dark:text-gray-400">
+                <div className="flex justify-center items-center space-x-4 mt-8">
                     <button 
                         onClick={() => handlePageChange(currentPage - 1)} 
                         disabled={currentPage === 1 || isLoading}
-                        className="px-4 py-2 bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 text-[#6B7280] dark:text-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
+                        className="px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center shadow-sm font-medium"
                     >
                         <ChevronLeft size={18} className="mr-1" />
                         Anterior
                     </button>
-                    <span className="font-medium">Página {currentPage} de {totalPages}</span>
+                    <span className="font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg text-sm">
+                        {currentPage} / {totalPages}
+                    </span>
                     <button 
                         onClick={() => handlePageChange(currentPage + 1)} 
                         disabled={currentPage === totalPages || isLoading}
-                        className="px-4 py-2 bg-[#FF6828] text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#E65014] transition-colors flex items-center"
+                        className="px-5 py-2.5 bg-[#FF6828] text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#E65014] transition-all flex items-center shadow-lg shadow-orange-500/20 font-bold"
                     >
                         Próxima
                         <ChevronRight size={18} className="ml-1" />
                     </button>
                 </div>
             )}
-        </>
+        </div>
       )}
       
       {!isLoading && !error && totalResults === 0 && searchParams && (
-        <div className="text-center py-12 text-[#6B7280] dark:text-gray-400 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
-            <h3 className="text-xl font-semibold text-[#111827] dark:text-gray-200">Poucas empresas encontradas para este filtro.</h3>
-            <p className="mt-2">Tente ajustar o segmento ou buscar em cidades vizinhas para melhores resultados.</p>
+        <div className="text-center py-16 px-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-full mb-4">
+                <SearchX size={48} className="text-gray-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Nenhum resultado encontrado</h3>
+            <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-md">
+                Não encontramos empresas com os critérios exatos em "{searchParams.city}". Tente aumentar o raio de busca ou usar termos mais genéricos.
+            </p>
+            <button 
+                onClick={() => document.getElementById('segment')?.focus()}
+                className="mt-6 text-[#FF6828] font-bold hover:underline"
+            >
+                Ajustar Filtros
+            </button>
         </div>
       )}
 

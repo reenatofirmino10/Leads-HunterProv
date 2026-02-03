@@ -5,6 +5,7 @@ import { Lead, PotentialLead, FunnelStatus, ProspectType } from '../types';
 interface AppContextType {
   leads: Lead[];
   addLead: (potentialLead: PotentialLead, type: ProspectType, city: string, state: string) => void;
+  addManualLead: (data: Partial<Lead>) => void;
   updateLeadStatus: (leadId: string, newStatus: FunnelStatus) => void;
   updateLead: (updatedLead: Lead) => void;
   getLeadById: (leadId: string) => Lead | undefined;
@@ -63,6 +64,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     saveLeads([...allLeads, newLead]);
   }, [allLeads]);
 
+  const addManualLead = useCallback((data: Partial<Lead>) => {
+    const creationDate = new Date().toISOString();
+    
+    const newLead: Lead = {
+      // Default values
+      id: `lead-manual-${Date.now()}`,
+      companyId: 'global-company',
+      usuario_id: 'guest-user',
+      status: FunnelStatus.NEW,
+      tipo_cliente: ProspectType.COMMERCIAL,
+      historico: [`Lead criado manualmente em ${new Date().toLocaleString()}`],
+      data_criacao: creationDate,
+      ultima_interacao: creationDate,
+      prioridade: false,
+      situacao_cadastral: 'Ativo',
+      presenca_digital: 'Não informada',
+      // Overwrite with provided data
+      ...data
+    } as Lead;
+
+    saveLeads([...allLeads, newLead]);
+  }, [allLeads]);
+
   const updateLeadStatus = useCallback((leadId: string, newStatus: FunnelStatus) => {
     const updated = allLeads.map(l => l.id === leadId ? { 
         ...l, 
@@ -81,7 +105,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getLeadById = (id: string) => leads.find(l => l.id === id);
 
   return (
-    <AppContext.Provider value={{ leads, addLead, updateLeadStatus, updateLead, getLeadById }}>
+    <AppContext.Provider value={{ leads, addLead, addManualLead, updateLeadStatus, updateLead, getLeadById }}>
       {children}
     </AppContext.Provider>
   );

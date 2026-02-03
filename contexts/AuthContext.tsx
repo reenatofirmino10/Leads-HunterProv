@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Company, UserStatus, CompanyStatus, UserRole } from '../types';
-import * as authService from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -16,89 +15,65 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock Data para acesso direto sem login
+const MOCK_USER: User = {
+  id: 'demo-user-id',
+  companyId: 'demo-company-id',
+  nome: 'Usuário Público',
+  email: 'demo@leadshunter.com',
+  role: UserRole.ADMIN_MASTER, // Acesso total
+  status: UserStatus.ACTIVE,
+  billableInCurrentCycle: true,
+  data_criacao: new Date().toISOString(),
+  accessLogs: [],
+  currentSessionId: 'demo-session',
+  lastSeen: new Date().toISOString()
+};
+
+const MOCK_COMPANY: Company = {
+  id: 'demo-company-id',
+  name: 'Gráfica Demo S.A.',
+  status: CompanyStatus.ACTIVE,
+  createdAt: new Date().toISOString(),
+  billingCycleStart: new Date().toISOString(),
+  billingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
+  lastCycleClosedAt: null,
+  basePrice: 50,
+  userPrice: 25
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshState = () => {
-    const saved = localStorage.getItem('hunter_current_user_v2');
-    if (saved) {
-      const parsedUser = JSON.parse(saved);
-      const allUsers = authService.masterGetAllUsers();
-      const dbUser = allUsers.find(u => u.id === parsedUser.id);
-      
-      // Validação de Sessão Única e Status
-      if (!dbUser || dbUser.currentSessionId !== parsedUser.currentSessionId || dbUser.status === UserStatus.INACTIVE) {
-        logout();
-        return;
-      }
-
-      setUser(dbUser);
-      localStorage.setItem('hunter_current_user_v2', JSON.stringify(dbUser));
-
-      if (dbUser.companyId) {
-        const companies = authService.masterGetAllCompanies();
-        const comp = companies.find(c => c.id === dbUser.companyId);
-        
-        // Bloqueio Global
-        if (comp && comp.status === CompanyStatus.BLOCKED && dbUser.role !== UserRole.ADMIN_MASTER) {
-           logout();
-           return;
-        }
-        setCompany(comp || null);
-      }
-    }
-  };
-
   useEffect(() => {
-    refreshState();
+    // Inicialização automática sem login
+    setUser(MOCK_USER);
+    setCompany(MOCK_COMPANY);
     setIsLoading(false);
   }, []);
 
-  // Monitor Heartbeat
-  useEffect(() => {
-    if (!user || !user.currentSessionId) return;
-
-    const interval = setInterval(() => {
-      authService.updateHeartbeat(user.id, user.currentSessionId!);
-      
-      const allUsers = authService.masterGetAllUsers();
-      const dbUser = allUsers.find(u => u.id === user.id);
-      
-      // Se a sessão mudou, significa que houve login em outro dispositivo
-      if (!dbUser || dbUser.currentSessionId !== user.currentSessionId) {
-        logout();
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const login = async (email: string, password_mock: string) => {
-    const loggedUser = await authService.login(email, password_mock);
-    setUser(loggedUser);
-    localStorage.setItem('hunter_current_user_v2', JSON.stringify(loggedUser));
-    
-    if (loggedUser.companyId) {
-        const companies = authService.masterGetAllCompanies();
-        setCompany(companies.find(c => c.id === loggedUser.companyId) || null);
-    }
-  };
-
-  const registerCompany = async (companyName: string, ownerName: string, email: string, password_mock: string) => {
-    await authService.registerCompanyRequest(companyName, ownerName, email, password_mock);
-  };
-
+  // Funções dummy para manter compatibilidade com componentes que chamam login/logout
+  const login = async () => {}; 
+  const registerCompany = async () => {};
   const logout = () => {
-    if (user) authService.logout(user.id);
-    setUser(null);
-    setCompany(null);
-    localStorage.removeItem('hunter_current_user_v2');
+    // Em modo demo, logout apenas recarrega a página
+    window.location.reload();
   };
+  const refreshState = () => {};
 
   return (
-    <AuthContext.Provider value={{ user, company, isAuthenticated: !!user, isLoading, login, registerCompany, logout, refreshState }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      company, 
+      isAuthenticated: true, // Sempre autenticado
+      isLoading, 
+      login, 
+      registerCompany, 
+      logout, 
+      refreshState 
+    }}>
       {children}
     </AuthContext.Provider>
   );

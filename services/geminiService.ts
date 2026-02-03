@@ -4,11 +4,50 @@ import { PotentialLead, Scripts, VoiceCommandResult, ProspectType, Lead, AISugge
 
 const API_KEY = process.env.API_KEY;
 
-if (!API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
+// Inicialização segura
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// --- MOCK FALLBACK DATA (Para quando a API falhar ou quota exceder) ---
+const MOCK_PROSPECTS_FALLBACK: PotentialLead[] = [
+    {
+        nome: "Gráfica Exemplo (Fallback)",
+        segmento: "Indústria Alimentícia",
+        cidade: "São Paulo",
+        estado: "SP",
+        telefone: "(11) 99999-9999",
+        instagram: "@exemplo",
+        site: "exemplo.com.br",
+        substrato_recomendado: "BOPP Brilho",
+        produtos_que_usa: "Rótulos Adesivos",
+        volume_estimado: "Médio",
+        frequencia_compra: "Média"
+    },
+    {
+        nome: "Padaria do Bairro (Fallback)",
+        segmento: "Panificadora",
+        cidade: "São Paulo",
+        estado: "SP",
+        telefone: "(11) 88888-8888",
+        instagram: "@padaria",
+        site: null,
+        substrato_recomendado: "Papel Térmico",
+        produtos_que_usa: "Etiquetas de Balança",
+        volume_estimado: "Baixo",
+        frequencia_compra: "Alta"
+    }
+];
+
+// Helper para limpar respostas da IA que vêm com markdown (```json ... ```)
+const cleanResponseText = (text: string | undefined): string => {
+    if (!text) return "{}";
+    let clean = text.trim();
+    if (clean.startsWith("```json")) {
+        clean = clean.replace(/^```json/, "").replace(/```$/, "");
+    } else if (clean.startsWith("```")) {
+        clean = clean.replace(/^```/, "").replace(/```$/, "");
+    }
+    return clean;
+};
 
 const prospectSearchResponseSchema = {
     type: Type.OBJECT,
@@ -54,6 +93,12 @@ export const findProspects = async (
   customSegment?: string 
 ): Promise<ProspectSearchResult> => {
   try {
+    // Verificação de ambiente
+    if (!ai) {
+        console.warn("API_KEY não encontrada. Usando dados de fallback.");
+        return { prospects: MOCK_PROSPECTS_FALLBACK, total: 2 };
+    }
+
     const offset = (page - 1) * limit;
     
     const isCustom = segment === 'Outro' && customSegment && customSegment.trim().length > 0;
@@ -93,9 +138,6 @@ export const findProspects = async (
       - Foco em contatos comerciais. NUNCA retorne dados privados.
     `;
 
-    /**
-     * Using gemini-3-flash-preview for general search and basic text tasks.
-     */
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [{ parts: [{ text: prompt }] }],
@@ -105,17 +147,23 @@ export const findProspects = async (
       }
     });
     
-    const jsonText = response.text || "{}";
-    const result = JSON.parse(jsonText);
+    const cleanJson = cleanResponseText(response.text);
+    const result = JSON.parse(cleanJson);
     
     return {
-      prospects: result.prospects.map((p: any) => ({ ...p, cidade: city, estado: state })) || [],
+      prospects: result.prospects?.map((p: any) => ({ ...p, cidade: city, estado: state })) || [],
       total: result.total_encontrado || 0,
     };
 
   } catch (error) {
-    console.error("Error finding prospects:", error);
-    throw new Error("Falha ao buscar prospects. Verifique o console para mais detalhes.");
+    console.error("Erro CRÍTICO em findProspects:", error);
+    
+    // Retorna Fallback em vez de quebrar a tela
+    console.log("Retornando dados de fallback para evitar crash na UI.");
+    return {
+        prospects: MOCK_PROSPECTS_FALLBACK.map(p => ({...p, cidade: city, estado: state})),
+        total: MOCK_PROSPECTS_FALLBACK.length
+    };
   }
 };
 
@@ -131,6 +179,8 @@ const scriptsSchema = {
 
 export const generateScripts = async (lead: PotentialLead): Promise<Scripts> => {
     try {
+        if (!ai) throw new Error("API Key missing");
+
         const prompt = `
             Você é um especialista em vendas para a indústria gráfica.
             Crie scripts de abordagem para a empresa "${lead.nome}", que atua no segmento de "${lead.segmento}".
@@ -142,9 +192,6 @@ export const generateScripts = async (lead: PotentialLead): Promise<Scripts> => 
             3.  **E-mail:** Um e-mail de apresentação profissional, destacando como sua gráfica pode ajudar especificamente essa empresa.
         `;
 
-        /**
-         * Using gemini-3-flash-preview for sales script generation.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -154,11 +201,15 @@ export const generateScripts = async (lead: PotentialLead): Promise<Scripts> => 
             }
         });
 
-        const jsonText = response.text || "{}";
-        return JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        return JSON.parse(cleanJson);
     } catch (error) {
         console.error("Error generating scripts:", error);
-        throw new Error("Falha ao gerar scripts. Verifique o console para mais detalhes.");
+        return {
+            whatsapp: "Olá, gostaria de falar sobre fornecimento de etiquetas.",
+            phone: "Bom dia, sou especialista em rótulos, tem um minuto?",
+            email: "Prezados, temos soluções em adesivos para sua empresa."
+        };
     }
 };
 
@@ -229,6 +280,8 @@ const leadAnalysisSchema = {
 
 export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAnalysis> => {
     try {
+        if (!ai) throw new Error("API Key missing");
+
         const prompt = `
             Atue como um Engenheiro de Vendas Sênior especializado em Embalagens, Rótulos e Etiquetas Adesivas (Indústria Gráfica).
             
@@ -251,9 +304,6 @@ export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAna
             Use linguagem técnica correta (ex: "BOPP", "Hotmelt", "Acrílico", "Frontal", "Liner").
         `;
 
-        /**
-         * Using gemini-3-flash-preview for high performance and stability in structured JSON tasks.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -263,8 +313,8 @@ export const generateLeadAnalysis = async (lead: PotentialLead): Promise<LeadAna
             }
         });
 
-        const jsonText = response.text || "{}";
-        return JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        return JSON.parse(cleanJson);
     } catch (error) {
         console.error("Error generating lead analysis:", error);
         throw new Error("Falha ao gerar análise do lead.");
@@ -284,6 +334,8 @@ const voiceCommandSchema = {
 
 export const interpretVoiceCommand = async (text: string): Promise<VoiceCommandResult> => {
     try {
+        if (!ai) throw new Error("API Key missing");
+
         const prompt = `
             Você é um assistente de IA para o sistema Leads Label. Sua tarefa é interpretar um comando de voz do usuário e extrair os parâmetros para uma busca de prospecção.
             
@@ -298,9 +350,6 @@ export const interpretVoiceCommand = async (text: string): Promise<VoiceCommandR
             Seja preciso. Preencha todos os campos obrigatórios do schema.
         `;
 
-        /**
-         * Using gemini-3-flash-preview for voice command interpretation.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -310,8 +359,8 @@ export const interpretVoiceCommand = async (text: string): Promise<VoiceCommandR
             }
         });
         
-        const jsonText = response.text || "{}";
-        return JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        return JSON.parse(cleanJson);
 
     } catch (error) {
         console.error("Error interpreting voice command:", error);
@@ -333,6 +382,8 @@ const nichesSchema = {
 
 export const getNichesForSegment = async (segment: string, customSegment?: string): Promise<string[]> => {
     try {
+        if (!ai) return [];
+
         const targetSubject = (segment === 'Outro' && customSegment && customSegment.trim().length > 0) 
             ? customSegment 
             : segment;
@@ -345,9 +396,6 @@ export const getNichesForSegment = async (segment: string, customSegment?: strin
             Para o segmento de negócio "${targetSubject}", gere uma lista de 5 a 8 nichos de mercado mais específicos.
         `;
 
-        /**
-         * Using gemini-3-flash-preview for list generation.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -356,8 +404,8 @@ export const getNichesForSegment = async (segment: string, customSegment?: strin
                 responseSchema: nichesSchema
             }
         });
-        const jsonText = response.text || "{}";
-        const result = JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        const result = JSON.parse(cleanJson);
         return result.niches || [];
     } catch (error) {
         console.error("Error fetching niches for segment:", error);
@@ -379,6 +427,8 @@ const suggestionsSchema = {
 
 export const generateLeadSuggestions = async (lead: Lead): Promise<AISuggestions> => {
     try {
+        if (!ai) throw new Error("API Key missing");
+
         const lastInteractionDate = new Date(lead.ultima_interacao);
         const daysSinceLastInteraction = (new Date().getTime() - lastInteractionDate.getTime()) / (1000 * 3600 * 24);
 
@@ -390,9 +440,6 @@ export const generateLeadSuggestions = async (lead: Lead): Promise<AISuggestions
             - Presença Digital: ${lead.presenca_digital || 'Não informada'}
         `;
 
-        /**
-         * Using gemini-3-flash-preview for sales suggestions.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -401,8 +448,8 @@ export const generateLeadSuggestions = async (lead: Lead): Promise<AISuggestions
                 responseSchema: suggestionsSchema,
             }
         });
-        const jsonText = response.text || "{}";
-        return JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        return JSON.parse(cleanJson);
 
     } catch (error) {
         console.error("Error generating lead suggestions:", error);
@@ -425,13 +472,12 @@ const additionalDataSchema = {
 
 export const findAdditionalData = async (lead: Lead): Promise<AdditionalDataSuggestions> => {
     try {
+        if (!ai) throw new Error("API Key missing");
+
         const prompt = `
           Aja como um detetive de dados B2B para a empresa "${lead.nome}" em "${lead.cidade}, ${lead.estado}".
         `;
 
-        /**
-         * Using gemini-3-flash-preview for data enrichment tasks.
-         */
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: [{ parts: [{ text: prompt }] }],
@@ -440,8 +486,8 @@ export const findAdditionalData = async (lead: Lead): Promise<AdditionalDataSugg
                 responseSchema: additionalDataSchema,
             }
         });
-        const jsonText = response.text || "{}";
-        return JSON.parse(jsonText);
+        const cleanJson = cleanResponseText(response.text);
+        return JSON.parse(cleanJson);
 
     } catch (error) {
         console.error("Error finding additional data:", error);

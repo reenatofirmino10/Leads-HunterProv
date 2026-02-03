@@ -65,10 +65,10 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ lead, prospectType,
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lead.nome} ${lead.cidade} ${lead.estado}`)}`;
 
   return (
-    // FIX: Layout adjust to respect System Header (top-[80px]) and z-index below header (z-40)
-    <div className="fixed inset-x-0 bottom-0 top-[80px] bg-gray-900/60 backdrop-blur-sm flex items-start justify-center z-40 p-4 lg:p-6" onClick={onClose}>
+    // Reverted to standard overlay
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 lg:p-6" onClick={onClose}>
       <div 
-        className="bg-[#F9FAFB] dark:bg-gray-950 w-full max-w-[1400px] h-full rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 dark:border-gray-800 ring-1 ring-black/5" 
+        className="bg-[#F9FAFB] dark:bg-gray-950 w-full max-w-[1400px] h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 dark:border-gray-800 ring-1 ring-black/5" 
         onClick={(e) => e.stopPropagation()}
       >
         
