@@ -6,29 +6,23 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { UserRole } from './types';
 
 // Views
-// Removed LoginView and RegisterView imports as they are no longer needed for direct access
-import DashboardView from './views/DashboardView';
 import ProspectingView from './views/ProspectingView';
-import FunnelView from './views/FunnelView';
-import AdminMasterDashboard from './views/AdminMasterDashboard';
 import CompanyDashboard from './views/CompanyDashboard';
 
 // Icons
-import { Sun, Moon, LayoutDashboard, Target, Kanban, Building2, LogOut, Loader2, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Target, Building2, Loader2 } from 'lucide-react';
 
 // Types for Navigation
 enum ViewState {
-  DASHBOARD = 'DASHBOARD',
   PROSPECTING = 'PROSPECTING',
-  FUNNEL = 'FUNNEL',
-  ADMIN_MASTER = 'ADMIN_MASTER',
   ADMIN_COMPANY = 'ADMIN_COMPANY'
 }
 
 const AuthenticatedApp: React.FC = () => {
-  const { user, logout, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
+  // Inicia direto na prospecção
+  const [currentView, setCurrentView] = useState<ViewState>(ViewState.PROSPECTING);
 
   if (isLoading) {
     return (
@@ -53,7 +47,7 @@ const AuthenticatedApp: React.FC = () => {
             {/* Logo */}
             <div 
               className="flex items-center gap-2 cursor-pointer"
-              onClick={() => setCurrentView(ViewState.DASHBOARD)}
+              onClick={() => setCurrentView(ViewState.PROSPECTING)}
             >
               <h1 className="text-2xl font-bold text-[#111827] dark:text-white tracking-wider">
                 Leads<span className="text-[#FF6828]">Hunter</span>
@@ -64,58 +58,27 @@ const AuthenticatedApp: React.FC = () => {
             <nav className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto max-w-full">
                
                <button 
-                 onClick={() => handleNavClick(ViewState.DASHBOARD)}
-                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.DASHBOARD ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-               >
-                 <LayoutDashboard size={16} />
-                 Início
-               </button>
-
-               <button 
                  onClick={() => handleNavClick(ViewState.PROSPECTING)}
-                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.PROSPECTING ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                 className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.PROSPECTING ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
                >
                  <Target size={16} />
                  Prospecção
                </button>
 
-               <button 
-                 onClick={() => handleNavClick(ViewState.FUNNEL)}
-                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.FUNNEL ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-               >
-                 <Kanban size={16} />
-                 Funil CRM
-               </button>
-
-               {/* Admin Tabs - Always visible for Demo Admin Master */}
+               {/* Admin Tabs - Mantendo apenas Gestão se o usuário for Owner */}
                {user?.role === UserRole.OWNER && (
                   <button 
                     onClick={() => handleNavClick(ViewState.ADMIN_COMPANY)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.ADMIN_COMPANY ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.ADMIN_COMPANY ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
                   >
                     <Building2 size={16} />
                     Gestão
-                  </button>
-               )}
-
-               {user?.role === UserRole.ADMIN_MASTER && (
-                  <button 
-                    onClick={() => handleNavClick(ViewState.ADMIN_MASTER)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${currentView === ViewState.ADMIN_MASTER ? 'bg-white dark:bg-gray-700 text-[#FF6828] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-                  >
-                    <ShieldCheck size={16} />
-                    Master
                   </button>
                )}
             </nav>
             
             {/* User Actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden md:block text-right mr-2">
-                <p className="text-xs font-bold text-gray-900 dark:text-white">{user?.nome}</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{user?.role}</p>
-              </div>
-
               <button 
                   onClick={toggleTheme}
                   className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -123,27 +86,14 @@ const AuthenticatedApp: React.FC = () => {
               >
                   {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
               </button>
-              
-              <button 
-                  onClick={() => window.location.reload()}
-                  className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Recarregar App"
-              >
-                  <LogOut size={18} />
-              </button>
             </div>
           </div>
         </header>
 
         {/* === MAIN CONTENT === */}
         <main className="flex-grow p-4 md:p-8 overflow-x-hidden max-w-[1600px] mx-auto w-full">
-          {currentView === ViewState.DASHBOARD && (
-            <DashboardView setView={(viewIdx) => setCurrentView(viewIdx === 1 ? ViewState.PROSPECTING : ViewState.DASHBOARD)} />
-          )}
           {currentView === ViewState.PROSPECTING && <ProspectingView />}
-          {currentView === ViewState.FUNNEL && <FunnelView />}
           {currentView === ViewState.ADMIN_COMPANY && <CompanyDashboard />}
-          {currentView === ViewState.ADMIN_MASTER && <AdminMasterDashboard />}
         </main>
       </div>
     </AppProvider>
